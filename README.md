@@ -9,6 +9,7 @@ Lightweight, efficient duplicate file detection tool written in Go.
   - Stage 2: Quick hash (size + mtime + first 8KB)
   - Stage 3: Full file hash (only when necessary)
 - **Concurrent Processing** - Worker pool using all CPU cores
+- **Image Filtering** - Optional flag to scan only image files
 - **xxHash Algorithm** - 10x faster than MD5 for non-cryptographic use
 - **Minimal Memory** - ~200 bytes per file, ~20MB for 100K files
 
@@ -24,9 +25,20 @@ Lightweight, efficient duplicate file detection tool written in Go.
 # Build
 go build -o dupe-checker
 
-# Run
+# Scan all files
 ./dupe-checker /path/to/scan
+
+# Scan only image files
+./dupe-checker --only-images /path/to/photos
 ```
+
+## Supported Image Formats
+
+When using `--only-images` flag:
+- jpg, jpeg, png, gif
+- heic, heif (Apple photos)
+- webp (modern web)
+- bmp (bitmap)
 
 ## Architecture
 

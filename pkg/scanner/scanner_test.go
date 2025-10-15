@@ -13,7 +13,7 @@ func TestScanNoDuplicates(t *testing.T) {
 	testutil.CreateTestFile(tmpDir+"/file3.txt", "Yet another unique content")
 
 	s := New()
-	duplicates, err := s.Scan(tmpDir)
+	duplicates, err := s.Scan(tmpDir, false)
 	if err != nil {
 		t.Fatalf("Scan failed: %v", err)
 	}
@@ -32,7 +32,7 @@ func TestScanWithDuplicates(t *testing.T) {
 	testutil.CreateTestFile(tmpDir+"/nested/file3.txt", content)
 
 	s := New()
-	duplicates, err := s.Scan(tmpDir)
+	duplicates, err := s.Scan(tmpDir, false)
 	if err != nil {
 		t.Fatalf("Scan failed: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestScanEmptyFiles(t *testing.T) {
 	testutil.CreateTestFile(tmpDir+"/empty2.txt", "")
 
 	s := New()
-	duplicates, err := s.Scan(tmpDir)
+	duplicates, err := s.Scan(tmpDir, false)
 	if err != nil {
 		t.Fatalf("Scan failed: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestScanMultipleGroups(t *testing.T) {
 	testutil.CreateTestFile(tmpDir+"/unique.txt", "Unique content")
 
 	s := New()
-	duplicates, err := s.Scan(tmpDir)
+	duplicates, err := s.Scan(tmpDir, false)
 	if err != nil {
 		t.Fatalf("Scan failed: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestScanSameSizeDifferentContent(t *testing.T) {
 	testutil.CreateTestFile(tmpDir+"/file2.txt", "Content BBB")
 
 	s := New()
-	duplicates, err := s.Scan(tmpDir)
+	duplicates, err := s.Scan(tmpDir, false)
 	if err != nil {
 		t.Fatalf("Scan failed: %v", err)
 	}
@@ -115,7 +115,7 @@ func TestScanWithTestFixtures(t *testing.T) {
 	}
 
 	s := New()
-	duplicates, err := s.Scan(tmpDir)
+	duplicates, err := s.Scan(tmpDir, false)
 	if err != nil {
 		t.Fatalf("Scan failed: %v", err)
 	}

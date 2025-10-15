@@ -22,8 +22,8 @@ func New() *Scanner {
 	}
 }
 
-func (s *Scanner) Scan(root string) ([]DuplicateGroup, error) {
-	files, err := Walk(root)
+func (s *Scanner) Scan(root string, onlyImages bool) ([]DuplicateGroup, error) {
+	files, err := Walk(root, onlyImages)
 	if err != nil {
 		return nil, err
 	}
@@ -51,12 +51,15 @@ func (s *Scanner) groupBySize(files []FileInfo) map[int64][]FileInfo {
 }
 
 func (s *Scanner) processQuickHashes(sizeGroups map[int64][]FileInfo) map[hasher.QuickHash][]FileInfo {
-	quickGroups := make(map[hasher.QuickHash][]FileInfo)
-	var mu sync.Mutex
+	type result struct {
+		hash hasher.QuickHash
+		file FileInfo
+	}
+
+	workChan := make(chan FileInfo, 100)
+	resultChan := make(chan result, 100)
 
 	var wg sync.WaitGroup
-	workChan := make(chan FileInfo, 100)
-
 	for i := 0; i < s.workers; i++ {
 		wg.Add(1)
 		go func() {
@@ -66,21 +69,29 @@ func (s *Scanner) processQuickHashes(sizeGroups map[int64][]FileInfo) map[hasher
 				if err != nil {
 					continue
 				}
-
-				mu.Lock()
-				quickGroups[qh] = append(quickGroups[qh], f)
-				mu.Unlock()
+				resultChan <- result{hash: qh, file: f}
 			}
 		}()
 	}
 
-	for _, group := range sizeGroups {
-		for _, f := range group {
-			workChan <- f
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	go func() {
+		for _, group := range sizeGroups {
+			for _, f := range group {
+				workChan <- f
+			}
 		}
+		close(workChan)
+	}()
+
+	quickGroups := make(map[hasher.QuickHash][]FileInfo)
+	for r := range resultChan {
+		quickGroups[r.hash] = append(quickGroups[r.hash], r.file)
 	}
-	close(workChan)
-	wg.Wait()
 
 	filtered := make(map[hasher.QuickHash][]FileInfo)
 	for qh, group := range quickGroups {
@@ -92,12 +103,15 @@ func (s *Scanner) processQuickHashes(sizeGroups map[int64][]FileInfo) map[hasher
 }
 
 func (s *Scanner) processFullHashes(quickGroups map[hasher.QuickHash][]FileInfo) []DuplicateGroup {
-	fullGroups := make(map[uint64][]string)
-	var mu sync.Mutex
+	type result struct {
+		hash uint64
+		path string
+	}
+
+	workChan := make(chan FileInfo, 100)
+	resultChan := make(chan result, 100)
 
 	var wg sync.WaitGroup
-	workChan := make(chan FileInfo, 100)
-
 	for i := 0; i < s.workers; i++ {
 		wg.Add(1)
 		go func() {
@@ -107,21 +121,29 @@ func (s *Scanner) processFullHashes(quickGroups map[hasher.QuickHash][]FileInfo)
 				if err != nil {
 					continue
 				}
-
-				mu.Lock()
-				fullGroups[fh] = append(fullGroups[fh], f.Path)
-				mu.Unlock()
+				resultChan <- result{hash: fh, path: f.Path}
 			}
 		}()
 	}
 
-	for _, group := range quickGroups {
-		for _, f := range group {
-			workChan <- f
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	go func() {
+		for _, group := range quickGroups {
+			for _, f := range group {
+				workChan <- f
+			}
 		}
+		close(workChan)
+	}()
+
+	fullGroups := make(map[uint64][]string)
+	for r := range resultChan {
+		fullGroups[r.hash] = append(fullGroups[r.hash], r.path)
 	}
-	close(workChan)
-	wg.Wait()
 
 	var duplicates []DuplicateGroup
 	for hash, paths := range fullGroups {

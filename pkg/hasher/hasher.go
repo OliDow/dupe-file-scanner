@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 
 	"github.com/cespare/xxhash/v2"
 )
@@ -16,6 +17,12 @@ type QuickHash struct {
 
 const headSize = 8 * 1024
 
+var bufferPool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, headSize)
+	},
+}
+
 func ComputeQuickHash(path string, size int64, modTime int64) (QuickHash, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -23,7 +30,9 @@ func ComputeQuickHash(path string, size int64, modTime int64) (QuickHash, error)
 	}
 	defer f.Close()
 
-	buf := make([]byte, headSize)
+	buf := bufferPool.Get().([]byte)
+	defer bufferPool.Put(buf)
+
 	n, err := f.Read(buf)
 	if err != nil && err != io.EOF {
 		return QuickHash{}, err

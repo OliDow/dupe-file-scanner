@@ -20,7 +20,7 @@ func BenchmarkScan10Files(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		s.Scan(tmpDir)
+		s.Scan(tmpDir, false)
 	}
 }
 
@@ -38,7 +38,7 @@ func BenchmarkScan100Files(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		s.Scan(tmpDir)
+		s.Scan(tmpDir, false)
 	}
 }
 
@@ -49,7 +49,7 @@ func BenchmarkQuickHashOnly(b *testing.B) {
 		testutil.CreateTestFile(fmt.Sprintf("%s/file_%d.txt", tmpDir, i), fmt.Sprintf("Unique content %d", i))
 	}
 
-	files, _ := Walk(tmpDir)
+	files, _ := Walk(tmpDir, false)
 	s := New()
 
 	b.ResetTimer()

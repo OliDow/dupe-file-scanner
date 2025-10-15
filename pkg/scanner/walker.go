@@ -3,6 +3,7 @@ package scanner
 import (
 	"io/fs"
 	"path/filepath"
+	"strings"
 )
 
 type FileInfo struct {
@@ -11,7 +12,23 @@ type FileInfo struct {
 	ModTime int64
 }
 
-func Walk(root string) ([]FileInfo, error) {
+var imageExtensions = map[string]bool{
+	".jpg":  true,
+	".jpeg": true,
+	".png":  true,
+	".gif":  true,
+	".heic": true,
+	".heif": true,
+	".webp": true,
+	".bmp":  true,
+}
+
+func isImage(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	return imageExtensions[ext]
+}
+
+func Walk(root string, onlyImages bool) ([]FileInfo, error) {
 	var files []FileInfo
 
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -20,6 +37,10 @@ func Walk(root string) ([]FileInfo, error) {
 		}
 
 		if d.IsDir() {
+			return nil
+		}
+
+		if onlyImages && !isImage(path) {
 			return nil
 		}
 
