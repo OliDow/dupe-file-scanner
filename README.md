@@ -2,6 +2,9 @@
 
 Lightweight, efficient duplicate file detection tool written in Go.
 
+[![CI](https://github.com/OliDow/dupe-file-scanner/actions/workflows/ci.yml/badge.svg)](https://github.com/OliDow/dupe-file-scanner/actions/workflows/ci.yml)
+
+
 ## Features
 
 - **3-Stage Hash Strategy** - Efficient filtering to minimize disk I/O
