@@ -76,8 +76,6 @@ changelog:
 
 release:
   github:
-    owner: "{{ .Env.GITHUB_REPOSITORY_OWNER }}"
-    name: "{{ .Env.GITHUB_REPOSITORY | replace .Env.GITHUB_REPOSITORY_OWNER \"\" | replace \"/\" \"\" }}"
   name_template: "{{.ProjectName}} {{.Version}}"
   header: |
     ## What's Changed
