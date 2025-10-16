@@ -1,0 +1,113 @@
+version: 2
+
+project_name: dupe-file-checker
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - main: ./
+    id: "dupe-file-checker"
+    binary: dupe-file-checker
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+
+archives:
+  - format: tar.gz
+    # this name template makes the OS and Arch compatible with the results of `uname`.
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    # use zip for windows archives
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE*
+      - CHANGELOG*
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+      - "^style:"
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: 'Bug fixes'
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: 'Performance improvements'
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: "{{ .Env.GITHUB_REPOSITORY_OWNER }}"
+    name: "{{ .Env.GITHUB_REPOSITORY | replace .Env.GITHUB_REPOSITORY_OWNER \"\" | replace \"/\" \"\" }}"
+  name_template: "{{.ProjectName}} {{.Version}}"
+  header: |
+    ## What's Changed
+
+    ### Installation
+
+    #### Download binaries
+
+    Download the appropriate binary for your platform from the assets below.
+
+    #### macOS/Linux via curl
+    ```bash
+    # macOS (Intel)
+    curl -L https://github.com/{{ .Env.GITHUB_REPOSITORY }}/releases/download/{{.Tag}}/{{.ProjectName}}_Darwin_x86_64.tar.gz | tar xz
+
+    # macOS (Apple Silicon)
+    curl -L https://github.com/{{ .Env.GITHUB_REPOSITORY }}/releases/download/{{.Tag}}/{{.ProjectName}}_Darwin_arm64.tar.gz | tar xz
+
+    # Linux
+    curl -L https://github.com/{{ .Env.GITHUB_REPOSITORY }}/releases/download/{{.Tag}}/{{.ProjectName}}_Linux_x86_64.tar.gz | tar xz
+    ```
+
+    #### Windows via PowerShell
+    ```powershell
+    Invoke-WebRequest -Uri "https://github.com/{{ .Env.GITHUB_REPOSITORY }}/releases/download/{{.Tag}}/{{.ProjectName}}_Windows_x86_64.zip" -OutFile "{{.ProjectName}}.zip"
+    Expand-Archive -Path "{{.ProjectName}}.zip" -DestinationPath "."
+    ```
+  footer: |
+    **Full Changelog**: https://github.com/{{ .Env.GITHUB_REPOSITORY }}/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+    ---
+
+    Built with ❤️ using [GoReleaser](https://goreleaser.com/)

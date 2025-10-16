@@ -33,3 +33,7 @@ Thumbs.db
 test_run/
 test_no_dupes/
 testdata/
+
+# AI
+CLAUDE.MD
+settings.local.json
