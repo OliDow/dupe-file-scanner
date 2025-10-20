@@ -118,7 +118,8 @@ func printDirectorySummary(dirStats map[string]*DirectoryStats) {
 
 // printDirectoryGroupedDuplicates prints detailed file listings grouped by directory
 func printDirectoryGroupedDuplicates(dirStats map[string]*DirectoryStats) {
-	fmt.Println("📂 DUPLICATES BY DIRECTORY:\n")
+	fmt.Println("📂 DUPLICATES BY DIRECTORY:")
+	fmt.Println()
 
 	// Convert map to slice for consistent ordering
 	var dirs []*DirectoryStats
