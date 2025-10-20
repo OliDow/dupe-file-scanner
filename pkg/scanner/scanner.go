@@ -2,8 +2,10 @@ package scanner
 
 import (
 	"dupe-file-checker/pkg/hasher"
+	"fmt"
 	"runtime"
 	"sync"
+	"time"
 )
 
 type DuplicateGroup struct {
@@ -22,11 +24,49 @@ func New() *Scanner {
 	}
 }
 
+// estimateScanTime estimates scan duration based on benchmark data
+// Benchmark data: 10 files = ~0.2ms, 100 files = ~1.6ms
+func estimateScanTime(fileCount int) time.Duration {
+	if fileCount <= 0 {
+		return 0
+	}
+
+	// Use logarithmic scaling based on benchmark data points
+	// For small file counts (< 10), use linear interpolation from 0.2ms
+	if fileCount <= 10 {
+		return time.Duration(float64(fileCount) * 0.02 * float64(time.Millisecond))
+	}
+
+	// For larger counts, use the relationship: time ≈ 0.02 * fileCount^1.1 ms
+	// This accounts for the slight increase in complexity with more files
+	timeMs := 0.02 * float64(fileCount) * (1.0 + float64(fileCount)/10000.0)
+
+	return time.Duration(timeMs * float64(time.Millisecond))
+}
+
 func (s *Scanner) Scan(root string, onlyImages bool) ([]DuplicateGroup, error) {
 	files, err := Walk(root, onlyImages)
 	if err != nil {
 		return nil, err
 	}
+
+	// Display the total count of included files and estimated time before starting scan
+	fileType := "files"
+	if onlyImages {
+		fileType = "image files"
+	}
+
+	estimatedTime := estimateScanTime(len(files))
+	var timeStr string
+	if estimatedTime < time.Second {
+		timeStr = fmt.Sprintf("%.1fms", float64(estimatedTime)/float64(time.Millisecond))
+	} else if estimatedTime < time.Minute {
+		timeStr = fmt.Sprintf("%.1fs", estimatedTime.Seconds())
+	} else {
+		timeStr = fmt.Sprintf("%.1fm", estimatedTime.Minutes())
+	}
+
+	fmt.Printf("Found %d %s to scan. Estimated time: %s\nStarting duplicate detection...\n\n", len(files), fileType, timeStr)
 
 	sizeGroups := s.groupBySize(files)
 	quickGroups := s.processQuickHashes(sizeGroups)
@@ -106,6 +146,7 @@ func (s *Scanner) processFullHashes(quickGroups map[hasher.QuickHash][]FileInfo)
 	type result struct {
 		hash uint64
 		path string
+		size int64
 	}
 
 	workChan := make(chan FileInfo, 100)
@@ -121,7 +162,7 @@ func (s *Scanner) processFullHashes(quickGroups map[hasher.QuickHash][]FileInfo)
 				if err != nil {
 					continue
 				}
-				resultChan <- result{hash: fh, path: f.Path}
+				resultChan <- result{hash: fh, path: f.Path, size: f.Size}
 			}
 		}()
 	}
@@ -141,8 +182,10 @@ func (s *Scanner) processFullHashes(quickGroups map[hasher.QuickHash][]FileInfo)
 	}()
 
 	fullGroups := make(map[uint64][]string)
+	fileSizes := make(map[uint64]int64)
 	for r := range resultChan {
 		fullGroups[r.hash] = append(fullGroups[r.hash], r.path)
+		fileSizes[r.hash] = r.size // All files with same hash have same size
 	}
 
 	var duplicates []DuplicateGroup
@@ -151,6 +194,7 @@ func (s *Scanner) processFullHashes(quickGroups map[hasher.QuickHash][]FileInfo)
 			duplicates = append(duplicates, DuplicateGroup{
 				Hash:  hash,
 				Files: paths,
+				Size:  fileSizes[hash],
 			})
 		}
 	}
